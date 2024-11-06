@@ -216,6 +216,37 @@ module.exports.controller = (app, io, socket_list) => {
 
         })
     })
+    app.get('/api/get_profile', (req, res) => {
+        // Retrieve the access token from headers
+        const accessToken = req.headers['access_token'];
+    
+        if (!accessToken) {
+          return res.status(401).json({ status: "0", message: "Unauthorized: Access token is missing" });
+        }
+    
+        // Verify access token and find the associated user_id
+        db.query('SELECT user_id FROM user_detail WHERE auth_token = ? AND status = ?', [accessToken, '1'], (err, result) => {
+          if (err) {
+            return res.status(500).json({ status: "0", message: "Error verifying access token" });
+          }
+    
+          if (result.length === 0) {
+            return res.status(401).json({ status: "0", message: "Invalid access token" });
+          }
+    
+          // Extract the user_id
+          const user_id = result[0].user_id;
+    
+          // Use getUserData to fetch full profile information
+          getUserData(user_id, (userProfile) => {
+            if (userProfile) {
+              res.json({ status: "1", payload: userProfile });
+            } else {
+              res.status(404).json({ status: "0", message: "User not found" });
+            }
+          });
+        });
+      });
 
     app.post('/api/update_image', (req, res) => {
 
@@ -273,19 +304,6 @@ module.exports.controller = (app, io, socket_list) => {
     })
 }
 
-function getUserData(user_id, callback) {
-    db.query('SELECT `user_id`, `name`, `email`, `password`, `mobile`, `address`, `image`, `device_type`, `auth_token`, `user_type` FROM `user_detail` WHERE `user_id` = ? AND `status` = ?', [user_id, '1'], (err, result) => {
-        if (err) {
-            helper.ThrowHtmlError(err);
-            return;
-        }
-
-        if (result.length > 0) {
-            return callback(result[0])
-        }
-    })
-}
-
 function getUserWithPasswordData(email, password, callback) {
     db.query('SELECT `user_id`, `name`, `email`, `password`, `mobile`, `address`, `image`, `device_type`, `auth_token`, `user_type`  FROM `user_detail` WHERE `email` = ? AND `password` = ? AND `status` = ?', [email, password, '1'], (err, result) => {
         if (err) {
@@ -300,6 +318,7 @@ function getUserWithPasswordData(email, password, callback) {
         }
     })
 }
+
 
 function checkAccessToken(headerObj, res, callback, require_type = "") {
     helper.Dlog(headerObj.access_token);
@@ -327,4 +346,26 @@ function checkAccessToken(headerObj, res, callback, require_type = "") {
             }
         })
     })
+    
 }
+
+
+
+  
+  // Helper function to retrieve user data based on user_id
+  function getUserData(user_id, callback) {
+    db.query('SELECT `user_id`, `name`, `email`, `password`, `mobile`, `address`, `image`, `device_type`, `auth_token`, `user_type` FROM `user_detail` WHERE `user_id` = ? AND `status` = ?', [user_id, '1'], (err, result) => {
+      if (err) {
+        console.error("Error fetching user data:", err);
+        return callback(null);
+      }
+  
+      if (result.length > 0) {
+        callback(result[0]);
+      } else {
+        callback(null);
+      }
+    });
+  }
+  
+  

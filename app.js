@@ -5,7 +5,7 @@ const http = require('http').Server(app);
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-var menuRouter = require('./routes/menu'); // Ensure this path is correct
+var menuRouter = require('./routes/menu'); 
 const loginController = require('./controllers/login_controller');
 
 const cors = require('cors');
