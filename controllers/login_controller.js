@@ -18,33 +18,40 @@ module.exports.controller = (app, io, socket_list) => {
     app.post('/api/login', (req, res) => {
         helper.Dlog(req.body);
         var reqObj = req.body;
-
+    
         helper.CheckParameterValid(res, reqObj, ["email", "password", "push_token"], () => {
-
             getUserWithPasswordData(reqObj.email, reqObj.password, (status, result) => {
                 if (status) {
+                    // Generate auth token
                     var auth_token = helper.createRequestToken();
-                    db.query('UPDATE `user_detail` SET `auth_token`= ?,`push_token`=? WHERE `user_id` = ?  AND `status` = ? ', [
-                        auth_token, reqObj.push_token, result.user_id, "1"], (err, uResult) => {
+    
+                    // Update the user's auth_token in the database
+                    db.query(
+                        'UPDATE `user_detail` SET `auth_token`= ?, `push_token`=? WHERE `user_id` = ? AND `status` = ? ',
+                        [auth_token, reqObj.push_token, result.user_id, "1"],
+                        (err, uResult) => {
                             if (err) {
                                 helper.ThrowHtmlError(err, res);
-                                return
+                                return;
                             }
-
+    
                             if (uResult.affectedRows > 0) {
+                                // Attach the auth token to the result object
                                 result.auth_token = auth_token;
-                                res.json({ "status": "1", "payload": result, "message": msg_success })
+                                // Send response with the payload including the auth_token
+                                res.json({ "status": "1", "payload": result, "message": msg_success });
                             } else {
-                                res.json({ "status": "0", "message": msg_invalidUserPassword })
+                                res.json({ "status": "0", "message": msg_invalidUserPassword });
                             }
-                        })
+                        }
+                    );
                 } else {
-                    res.json({ "status": "0", "message": result })
+                    res.json({ "status": "0", "message": result });
                 }
-            })
-
-        })
-    })
+            });
+        });
+    });
+    
 
     app.post('/api/sign_up', (req, res) => {
         helper.Dlog(req.body);
